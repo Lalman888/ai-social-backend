@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse, JSONResponse
-from app.services.auth_service import process_google_login, process_google_callback
+from app.services.auth_service import (
+    process_google_login, process_google_callback,
+    process_facebook_login, process_facebook_callback, # Add Facebook
+    process_instagram_login, process_instagram_callback # Add Instagram
+)
 from app.models.token import Token
 from app.models.user import UserPublic
 import logging
@@ -62,6 +66,95 @@ async def auth_google_callback(request: Request):
         raise e
     except Exception as e:
         logger.error(f"Unexpected error in Google callback route: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed.")
+
+
+@router.get("/login/facebook", summary="Initiate Facebook OAuth2 login")
+async def login_facebook(request: Request):
+    '''
+    Redirects the user to Facebook's authentication page.
+    '''
+    try:
+        # Ensure service function checks if FB login is configured
+        response = await process_facebook_login(request)
+        return response
+    except HTTPException as e:
+         # Re-raise HTTPExceptions (like 501 Not Implemented)
+         raise e
+    except Exception as e:
+        logger.error(f"Error initiating Facebook login: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not initiate Facebook login.")
+
+
+@router.get("/login/instagram", summary="Initiate Instagram OAuth2 login")
+async def login_instagram(request: Request):
+    '''
+    Redirects the user to Instagram's authentication page.
+    '''
+    try:
+        # Ensure service function checks if IG login is configured
+        response = await process_instagram_login(request)
+        return response
+    except HTTPException as e:
+         raise e
+    except Exception as e:
+        logger.error(f"Error initiating Instagram login: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not initiate Instagram login.")
+
+
+@router.get("/facebook/callback", summary="Handle Facebook OAuth2 callback")
+async def auth_facebook_callback(request: Request):
+    '''
+    Handles the callback from Facebook after user authentication.
+    Returns JWT and user info on success.
+    '''
+    try:
+        user, access_token = await process_facebook_callback(request)
+
+        if user and access_token:
+            logger.info(f"Facebook callback successful for user: {user.email or user.id}. Returning JWT.")
+            user_public = UserPublic.model_validate(user)
+            return JSONResponse(content={
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": user_public.model_dump()
+            })
+        else:
+            # Should be handled by exceptions in service layer
+            logger.error("Facebook callback processing returned None without raising exception.")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication processing failed.")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error in Facebook callback route: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed.")
+
+
+@router.get("/instagram/callback", summary="Handle Instagram OAuth2 callback")
+async def auth_instagram_callback(request: Request):
+    '''
+    Handles the callback from Instagram after user authentication.
+    Returns JWT and user info on success.
+    '''
+    try:
+        user, access_token = await process_instagram_callback(request)
+
+        if user and access_token:
+            logger.info(f"Instagram callback successful for user ID: {user.instagram_id}. Returning JWT.")
+            user_public = UserPublic.model_validate(user)
+            return JSONResponse(content={
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user": user_public.model_dump()
+            })
+        else:
+            # Should be handled by exceptions in service layer
+            logger.error("Instagram callback processing returned None without raising exception.")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication processing failed.")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error in Instagram callback route: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed.")
 
 # Example of a protected route (to be added later or in a different router)

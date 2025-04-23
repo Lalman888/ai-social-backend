@@ -29,6 +29,16 @@ class Settings(BaseSettings):
     # App Settings (e.g., for Authlib session signing)
     app_secret_key: str = Field(..., alias='APP_SECRET_KEY')
 
+    # Facebook OAuth2
+    facebook_client_id: Optional[str] = Field(None, alias='FACEBOOK_CLIENT_ID')
+    facebook_client_secret: Optional[str] = Field(None, alias='FACEBOOK_CLIENT_SECRET')
+    facebook_redirect_uri: Optional[str] = Field(None, alias='FACEBOOK_REDIRECT_URI')
+
+    # Instagram Basic Display API OAuth2
+    instagram_client_id: Optional[str] = Field(None, alias='INSTAGRAM_CLIENT_ID')
+    instagram_client_secret: Optional[str] = Field(None, alias='INSTAGRAM_CLIENT_SECRET')
+    instagram_redirect_uri: Optional[str] = Field(None, alias='INSTAGRAM_REDIRECT_URI')
+
     class Config:
         # If you don't use alias, Pydantic will expect env var names
         # to match field names exactly (e.g., MONGO_URI for mongo_uri)

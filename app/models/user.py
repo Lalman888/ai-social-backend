@@ -2,37 +2,52 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 
 class UserBase(BaseModel):
-    email: EmailStr = Field(..., description="User's unique email address")
+    email: Optional[EmailStr] = Field(None, description="User's email address (Optional as might not be provided by all OAuth providers initially)") # Made email optional
     full_name: Optional[str] = Field(None, description="User's full name")
     picture: Optional[str] = Field(None, description="URL to user's profile picture")
-    # Add other fields obtained from Google profile if needed
+    # Add other fields obtained from profiles if needed
 
 class UserCreate(UserBase):
     # Fields required specifically for creation, if any
-    # Often the same as UserBase initially
+    # Might require email depending on your policy
     pass
 
 class UserUpdate(BaseModel):
     # Fields that can be updated
     full_name: Optional[str] = None
     picture: Optional[str] = None
+    email: Optional[EmailStr] = None # Allow email update/addition?
 
 class UserInDBBase(UserBase):
-    # Fields that are stored in the DB, potentially including hashed passwords etc.
-    # For Google OAuth, we might store the Google ID
-    google_id: str = Field(..., description="User's unique Google ID")
-    refresh_token: Optional[str] = Field(None, description="Stored Google Refresh Token") # Store securely!
+    # Fields that are stored in the DB
+    google_id: Optional[str] = Field(None, description="User's unique Google ID") # Made optional
+    facebook_id: Optional[str] = Field(None, description="User's unique Facebook ID") # Added
+    instagram_id: Optional[str] = Field(None, description="User's unique Instagram ID") # Added
+
+    refresh_token: Optional[str] = Field(None, description="Stored Google Refresh Token (Optional, secure storage needed)")
 
     class Config:
         from_attributes = True # Pydantic V2 replaces orm_mode
 
-# Represents a user object as stored in MongoDB (potentially including ObjectId)
-# We might not need a separate model if UserInDBBase covers it,
-# but useful if DB representation differs significantly.
+# Represents a user object as stored in MongoDB (inherits new fields)
 class User(UserInDBBase):
-    id: str = Field(..., alias="_id", description="MongoDB document ID") # Or handle ObjectId conversion
+    # Assuming Pydantic handles ObjectId conversion via alias or custom type later
+    # If using standard string IDs from the start:
+    id: str = Field(..., description="MongoDB document ID (_id as string)")
+
+    # Override Config if needed, but inherits by default
+    # class Config:
+    #    from_attributes = True
+
 
 # Represents the final user object returned by the API (excluding sensitive data)
 class UserPublic(UserBase):
-     id: str = Field(..., description="User's public ID (can be same as DB ID)")
-     # Exclude sensitive fields like refresh_token
+     id: str = Field(..., description="User's public ID")
+     # Ensure it inherits changes like optional email from UserBase
+     # Add any other fields safe for public exposure
+     google_linked: bool = Field(False, description="Indicates if Google account is linked")
+     facebook_linked: bool = Field(False, description="Indicates if Facebook account is linked")
+     instagram_linked: bool = Field(False, description="Indicates if Instagram account is linked")
+
+     # Custom validator or logic might be needed to set linked status
+     # Or compute it in the route before returning UserPublic
