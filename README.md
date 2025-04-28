@@ -111,6 +111,73 @@ In addition to Google OAuth, this application supports login via Facebook and In
     *   Interactive documentation (Swagger UI) is usually at `http://localhost:8000/docs`.
     *   Alternative documentation (ReDoc) is usually at `http://localhost:8000/redoc`.
 
+## Running with Docker Compose
+
+This project includes configuration for running the entire application stack (Backend API, Celery Worker, MongoDB, Redis) using Docker Compose.
+
+### Prerequisites
+
+*   [Docker](https://docs.docker.com/get-docker/) installed.
+*   [Docker Compose](https://docs.docker.com/compose/install/) installed (often included with Docker Desktop).
+
+### Setup
+
+1.  **Environment File:** Ensure you have a `.env` file in the project root, based on `.env.example`, with your actual credentials filled in (Google OAuth, Facebook, Instagram, OpenAI keys, JWT/App secrets). The database and Redis connection details (`MONGO_URI`, `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`) in the `.env` file are *not* directly used by the containers (as they are overridden in `docker-compose.yml`), but other variables like API keys and secrets are loaded from here.
+
+2.  **(Optional) Build Images:** While `docker-compose up` will build images automatically if they don't exist, you can build them explicitly:
+    ```bash
+    docker-compose build
+    ```
+
+### Running the Application
+
+1.  **Start Services:** Run the following command from the project root directory:
+    ```bash
+    docker-compose up
+    ```
+    *   This command will build the images (if not already built), create and start the containers for the `backend`, `worker`, `mongo`, and `redis` services in the foreground.
+    *   You will see logs from all services interleaved in your terminal.
+    *   The FastAPI backend API will typically be available at `http://localhost:8000`.
+
+2.  **Running in Detached Mode:** To run the services in the background, use the `-d` flag:
+    ```bash
+    docker-compose up -d
+    ```
+
+3.  **Viewing Logs:**
+    *   If running in detached mode, view logs for all services:
+        ```bash
+        docker-compose logs -f
+        ```
+    *   View logs for a specific service (e.g., `backend`):
+        ```bash
+        docker-compose logs -f backend
+        ```
+
+4.  **Stopping Services:**
+    *   If running in the foreground, press `Ctrl+C`.
+    *   If running in detached mode:
+        ```bash
+        docker-compose down
+        ```
+        *   This stops and removes the containers. Add the `-v` flag (`docker-compose down -v`) if you also want to remove the named volumes (`mongo-data`, `redis-data`), effectively deleting your database and Redis data.
+
+### Development Workflow
+
+*   The `docker-compose.yml` mounts the project directory into the `backend` and `worker` containers.
+*   The `backend` service uses `--reload` with Uvicorn.
+*   This means changes you make to the Python code should automatically trigger a reload of the Uvicorn server and Celery worker (though Celery might require a manual restart sometimes depending on the changes). You don't typically need to rebuild the image for simple code changes during development.
+*   If you change dependencies (`requirements.txt`), you will need to rebuild the image:
+    ```bash
+    docker-compose build backend worker
+    # or simply docker-compose build
+    ```
+    Then restart the services:
+    ```bash
+    docker-compose up -d --force-recreate backend worker
+    # or docker-compose up -d --force-recreate
+    ```
+
 ## API Endpoints
 
 *   `GET /`: Root endpoint for basic health check.

@@ -1,0 +1,86 @@
+version: '3.8' # Specify compose file version
+
+services:
+  mongo:
+    image: mongo:6 # Use a specific version (e.g., 6)
+    container_name: ai_social_mongo
+    ports:
+      - "27017:27017" # Map host port to container port
+    volumes:
+      - mongo-data:/data/db # Persist MongoDB data using a named volume
+    # environment: # Optional: Add authentication if needed for production
+    #   - MONGO_INITDB_ROOT_USERNAME=user
+    #   - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - app-network # Connect to custom network
+
+  redis:
+    image: redis:7-alpine # Use a specific version (e.g., 7-alpine)
+    container_name: ai_social_redis
+    ports:
+      - "6379:6379" # Map host port to container port
+    volumes:
+      - redis-data:/data # Persist Redis data (optional)
+    networks:
+      - app-network # Connect to custom network
+
+  backend:
+    build:
+      context: . # Use the Dockerfile in the current directory
+      dockerfile: Dockerfile
+    container_name: ai_social_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # Use reload for development
+    volumes:
+      - .:/home/app/web # Mount current directory to container workdir for hot-reloading
+    ports:
+      - "8000:8000" # Map host port to container port
+    env_file:
+      - .env # Load environment variables from .env file
+    environment:
+      # Override specific variables for container networking
+      - MONGO_URI=mongodb://mongo:27017/mydatabase # Use service name 'mongo'
+      - CELERY_BROKER_URL=redis://redis:6379/0     # Use service name 'redis'
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1 # Use service name 'redis'
+      # Ensure PYTHONUNBUFFERED and PYTHONDONTWRITEBYTECODE are set if needed
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - app-network # Connect to custom network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai_social_worker
+    # Command to start the Celery worker
+    command: celery -A app.core.celery_app worker --loglevel=info -Q celery # Specify queue if needed
+    volumes:
+      - .:/home/app/web # Mount code for consistency
+    env_file:
+      - .env
+    environment:
+      # Override specific variables for container networking
+      - MONGO_URI=mongodb://mongo:27017/mydatabase
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    depends_on:
+      - mongo
+      - redis
+      - backend # Optional: wait for backend to be healthy if worker depends on it directly? Usually not needed.
+    networks:
+      - app-network # Connect to custom network
+
+volumes:
+  mongo-data: # Define named volume for MongoDB
+    driver: local
+  redis-data: # Define named volume for Redis
+    driver: local
+
+networks:
+  app-network: # Define custom bridge network
+    driver: bridge

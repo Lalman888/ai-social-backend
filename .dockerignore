@@ -1,0 +1,52 @@
+# Git files
+.git
+.gitignore
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Python virtual environment
+venv
+.venv
+env
+*/env
+*/venv
+*/.venv
+
+# Python cache files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+
+# IDE and OS files
+.idea
+.vscode
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Environment files (should not be copied into image)
+.env
+*.env.*
+!.env.example # Keep example file if needed for reference within container? Usually not.
+
+# Build artifacts
+dist
+build
+*.egg-info
+
+# Test reports
+htmlcov
+.coverage
+
+# Log files
+*.log
+
+# Other specific project files/folders to ignore
+# e.g., media_files/ if they are large and not needed in build
