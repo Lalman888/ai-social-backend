@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     instagram_client_secret: Optional[str] = Field(None, alias='INSTAGRAM_CLIENT_SECRET')
     instagram_redirect_uri: Optional[str] = Field(None, alias='INSTAGRAM_REDIRECT_URI')
 
+    # Celery / Redis
+    celery_broker_url: str = Field("redis://localhost:6379/0", alias='CELERY_BROKER_URL')
+    celery_result_backend: str = Field("redis://localhost:6379/1", alias='CELERY_RESULT_BACKEND')
+
     class Config:
         # If you don't use alias, Pydantic will expect env var names
         # to match field names exactly (e.g., MONGO_URI for mongo_uri)

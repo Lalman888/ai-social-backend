@@ -23,6 +23,9 @@ class UserInDBBase(UserBase):
     google_id: Optional[str] = Field(None, description="User's unique Google ID") # Made optional
     facebook_id: Optional[str] = Field(None, description="User's unique Facebook ID") # Added
     instagram_id: Optional[str] = Field(None, description="User's unique Instagram ID") # Added
+    access_token: Optional[str] = Field(None, description="Stored access token for the user (latest login)") # Added field
+    # Consider a more robust structure like:
+    # tokens: Optional[Dict[str, Dict[str, Any]]] = Field(None, description="Stored tokens per provider")
 
     refresh_token: Optional[str] = Field(None, description="Stored Google Refresh Token (Optional, secure storage needed)")
 
